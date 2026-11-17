@@ -1,0 +1,44 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.Rhistory
+.RData
+.DS_Store
+.vscode/
+.idea/
+
+# Researcher-written project brief; local only
+TASK.md
+
+# Holds local data paths; commit config.example.json only
+config/config.json
+
+# Patient-level, never committed
+output/intermediate_phi/
+
+# Data files anywhere except the aggregate, shareable outputs
+*.parquet
+*.csv
+*.tsv
+*.feather
+*.arrow
+*.rds
+*.RData
+*.fst
+*.xlsx
+*.xls
+*.pkl
+*.duckdb
+*.sqlite
+*.db
+!output/final_no_phi/**
+
+# Synthetic sandbox and its outputs
+dev_data/
+
+# Published papers: read locally, not redistributed
+references/*.pdf
+
+# Claude working notes (plans, decision log, lessons): local only
+.claude/

@@ -1,0 +1,14 @@
+# Compute stack PINNED for cross-site reproducibility: every site must compute identical numbers.
+# clifpy governs *_dttm tz localization and changed it in 0.5.0. Bump deliberately and
+# re-validate; never use a >= floor here.
+clifpy==0.4.9
+pandas==3.0.3
+numpy==2.4.6
+pyarrow==24.0.0
+duckdb==1.5.3
+scipy==1.17.1
+pyyaml==6.0.3
+
+# Presentation / utility: does not affect computed numbers, so floored.
+matplotlib>=3.8
+tabulate>=0.9

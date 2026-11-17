@@ -1,0 +1,39 @@
+# Shared study definitions: identical at every site. Site-specific settings live in config.json.
+# Every key here must be read by some step; tests/test_definitions_used.py fails on one that is not.
+definition_version: "0.1.0"
+clif_version: "3.0.0"
+# CLIF 3.0 is unreleased; table and vocabulary names are pinned to this commit of the 3.0 branch.
+clif_spec_ref: "Common-Longitudinal-ICU-data-Format/CLIF@3ee2e0292d55017506d247deacc4edf5a1d0054d"
+
+# Logical table -> file stem (clif_<file>.<filetype>) and the columns read.
+# `rename` maps logical column -> the site's physical column, for tables whose 3.0 names are still moving.
+tables:
+  hospitalization:
+    file: hospitalization
+    columns: [patient_id, hospitalization_id, admission_dttm, discharge_dttm, age_at_admission,
+              discharge_category]
+  adt:
+    file: adt
+    columns: [hospitalization_id, in_dttm, out_dttm, location_category]
+  renal_replacement_therapy:
+    file: renal_replacement_therapy
+    columns: [hospitalization_id, recorded_dttm, mode_category]
+    rename: {}
+  labs:
+    file: labs
+    columns: [hospitalization_id, lab_category, lab_value_numeric, lab_collect_dttm,
+              lab_specimen_category]
+
+cohort:
+  min_age_years: 18
+  icu_location_category: icu
+  # Consecutive ICU adt rows separated by at most this many hours form one ICU stay.
+  icu_merge_gap_hours: 0
+  crrt_modes: [cvvh, cvvhd, cvvhdf]
+  crrt_episode_gap_hours: 24
+  window_after_crrt_end_hours: 48
+
+phosphate:
+  lab_category: phosphate
+  specimen_category: plasma_blood
+  hypophosphatemia_below_mg_dl: 2.5

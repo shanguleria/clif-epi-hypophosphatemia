@@ -1,0 +1,9 @@
+{
+  "site": "SITE_NAME",
+  "data_directory": "/absolute/path/to/CLIF/tables",
+  "filetype": "parquet",
+  "timezone": "US/Central",
+  "clif_version": "3.0.0",
+  "small_cell_threshold": 11,
+  "redact_site_names": []
+}
