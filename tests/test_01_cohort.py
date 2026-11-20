@@ -45,11 +45,12 @@ got = {row[cols.index("patient_id")]: dict(zip(cols, row)) for row in rows}
 
 check("cohort patients match", set(got) == set(syn.EXPECTED["cohort"]),
       f"extra {set(got) - set(syn.EXPECTED['cohort'])}, missing {set(syn.EXPECTED['cohort']) - set(got)}")
-for pid, (hid, t0, end, wend, icu_in, base) in syn.EXPECTED["cohort"].items():
+for pid, (hid, t0, end, phos_end, follow_end, icu_in, base) in syn.EXPECTED["cohort"].items():
     g = got.get(pid)
     if g is None:
         continue
-    exp = {"hospitalization_id": hid, "t0": syn.t(t0), "crrt_end": syn.t(end), "window_end": syn.t(wend),
+    exp = {"hospitalization_id": hid, "t0": syn.t(t0), "crrt_end": syn.t(end),
+           "phosphate_window_end": syn.t(phos_end), "followup_end": syn.t(follow_end),
            "icu_in": syn.t(icu_in), "has_baseline_phosphate": base}
     bad = {k: (g[k], v) for k, v in exp.items() if g[k] != v}
     check(f"{pid} index, window and baseline", not bad, bad)

@@ -1,11 +1,11 @@
 """Cohort: one row per adult patient, indexed at their first CRRT started in the ICU.
 
 1. adult         hospitalizations with age >= min_age_years
-2. icu_stay      ICU adt rows merged into continuous stays
+2. icu_stay      ICU adt rows merged into stays across short or procedure-only gaps
 3. crrt_episode  qualifying-mode CRRT records, split into episodes at long gaps
 4. crrt_in_icu   episodes whose first record falls inside an ICU stay
-5. index_crrt    each patient's earliest such episode; t0 = its first record
-6. cohort        drop patients with low phosphate before t0; flag those with none
+5. index_crrt    each patient's earliest such episode; t0 = its first record; outcome windows
+6. cohort        drop patients with low phosphate in the lookback before t0; flag those with none
 """
 from datetime import timedelta
 
@@ -19,27 +19,38 @@ step.table("adult", """
     SELECT * FROM hospitalization WHERE age_at_admission >= $min_age
 """, min_age=cohort["min_age_years"])
 
-# Steps 2 and 3 use the same gaps-and-islands pattern: a row starts a new stay/episode when it
-# begins more than `gap` after the previous one ended, and a running count of those starts
-# numbers the stays/episodes.
+# Steps 2 and 3 use the same gaps-and-islands pattern: a row starts a new stay/episode when the
+# gap since the previous one is too long, and a running count of those starts numbers them.
 step.table("icu_stay", """
-    WITH icu_rows AS (
+    WITH adult_adt AS (
+        SELECT * FROM adt WHERE hospitalization_id IN (SELECT hospitalization_id FROM adult)
+    ), icu_rows AS (
         SELECT hospitalization_id, in_dttm, out_dttm,
                max(out_dttm) OVER (PARTITION BY hospitalization_id ORDER BY in_dttm, out_dttm
                                    ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev_out
-        FROM adt
+        FROM adult_adt
         WHERE location_category = $icu
-          AND hospitalization_id IN (SELECT hospitalization_id FROM adult)
+    ), gap_locations AS (
+        SELECT r.hospitalization_id, r.in_dttm,
+               bool_and(list_contains($bridge::VARCHAR[], a.location_category)) AS bridge_only
+        FROM icu_rows r
+        JOIN adult_adt a ON a.hospitalization_id = r.hospitalization_id
+                        AND a.in_dttm < r.in_dttm AND a.out_dttm > r.prev_out
+                        AND a.location_category <> $icu
+        GROUP BY r.hospitalization_id, r.in_dttm
     ), numbered AS (
-        SELECT *, count_if(prev_out IS NULL OR in_dttm > prev_out + $gap::INTERVAL)
-                      OVER (PARTITION BY hospitalization_id ORDER BY in_dttm, out_dttm
-                            ROWS UNBOUNDED PRECEDING) AS icu_stay_seq
-        FROM icu_rows
+        SELECT r.*, count_if(r.prev_out IS NULL
+                             OR (r.in_dttm > r.prev_out + $gap::INTERVAL AND NOT coalesce(g.bridge_only, false)))
+                        OVER (PARTITION BY r.hospitalization_id ORDER BY r.in_dttm, r.out_dttm
+                              ROWS UNBOUNDED PRECEDING) AS icu_stay_seq
+        FROM icu_rows r
+        LEFT JOIN gap_locations g USING (hospitalization_id, in_dttm)
     )
     SELECT hospitalization_id, icu_stay_seq, min(in_dttm) AS icu_in, max(out_dttm) AS icu_out
     FROM numbered
     GROUP BY hospitalization_id, icu_stay_seq
-""", icu=cohort["icu_location_category"], gap=timedelta(hours=cohort["icu_merge_gap_hours"]))
+""", icu=cohort["icu_location_category"], gap=timedelta(hours=cohort["icu_merge_gap_hours"]),
+     bridge=cohort["icu_bridge_location_categories"])
 
 step.table("crrt_episode", """
     WITH crrt_rows AS (
@@ -70,12 +81,14 @@ step.table("crrt_in_icu", """
 step.table("index_crrt", """
     SELECT h.patient_id, e.hospitalization_id, e.icu_stay_seq, e.icu_in, e.icu_out,
            e.crrt_start AS t0, e.crrt_end,
-           least(e.crrt_end + $after_end::INTERVAL, e.icu_out, h.discharge_dttm) AS window_end,
+           least(e.crrt_end + $phosphate_window::INTERVAL, e.icu_out, h.discharge_dttm) AS phosphate_window_end,
+           least(e.crrt_start + $followup::INTERVAL, h.discharge_dttm) AS followup_end,
            h.admission_dttm, h.discharge_dttm, h.discharge_category
     FROM crrt_in_icu e
     JOIN adult h ON h.hospitalization_id = e.hospitalization_id
     QUALIFY row_number() OVER (PARTITION BY h.patient_id ORDER BY e.crrt_start, e.hospitalization_id) = 1
-""", after_end=timedelta(hours=cohort["window_after_crrt_end_hours"]))
+""", phosphate_window=timedelta(hours=cohort["phosphate_window_after_crrt_end_hours"]),
+     followup=timedelta(days=cohort["followup_days"]))
 
 step.table("cohort", """
     WITH phosphate_before_t0 AS (
@@ -83,7 +96,8 @@ step.table("cohort", """
                count(l.lab_value_numeric) AS n_measured,
                count_if(l.lab_value_numeric < $low) AS n_low
         FROM index_crrt i
-        JOIN labs l ON l.hospitalization_id = i.hospitalization_id AND l.lab_collect_dttm < i.t0
+        JOIN labs l ON l.hospitalization_id = i.hospitalization_id
+                   AND l.lab_collect_dttm >= i.t0 - $lookback::INTERVAL AND l.lab_collect_dttm < i.t0
         WHERE l.lab_category = $lab AND l.lab_specimen_category = $specimen
         GROUP BY i.patient_id
     )
@@ -93,7 +107,7 @@ step.table("cohort", """
     WHERE coalesce(p.n_low, 0) = 0
     ORDER BY i.patient_id
 """, low=phosphate["hypophosphatemia_below_mg_dl"], lab=phosphate["lab_category"],
-     specimen=phosphate["specimen_category"])
+     specimen=phosphate["specimen_category"], lookback=timedelta(hours=phosphate["lookback_before_t0_hours"]))
 
 n_indexed, n_cohort = step.count("index_crrt"), step.count("cohort")
 step.finish("cohort", counts={

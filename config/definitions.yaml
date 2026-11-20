@@ -1,6 +1,6 @@
 # Shared study definitions: identical at every site. Site-specific settings live in config.json.
 # Every key here must be read by some step; tests/test_01_cohort.py fails on one that is not.
-definition_version: "0.1.0"
+definition_version: "0.2.0"
 clif_version: "3.0.0"
 # CLIF 3.0 is unreleased; table and vocabulary names are pinned to this commit of the 3.0 branch.
 clif_spec_ref: "Common-Longitudinal-ICU-data-Format/CLIF@3ee2e0292d55017506d247deacc4edf5a1d0054d"
@@ -27,13 +27,20 @@ tables:
 cohort:
   min_age_years: 18
   icu_location_category: icu
-  # Consecutive ICU adt rows separated by at most this many hours form one ICU stay.
-  icu_merge_gap_hours: 0
+  # ICU adt rows join one stay across a gap of at most icu_merge_gap_hours, or across a gap of any
+  # length spent only in icu_bridge_location_categories (ICU -> OR -> ICU).
+  icu_merge_gap_hours: 6
+  icu_bridge_location_categories: [procedural, radiology]
   crrt_modes: [cvvh, cvvhd, cvvhdf]
   crrt_episode_gap_hours: 24
-  window_after_crrt_end_hours: 48
+  # Phosphate outcomes: t0 to the earliest of CRRT end + this, ICU-stay end and hospital discharge.
+  phosphate_window_after_crrt_end_hours: 48
+  # Longer-term outcomes: t0 to the earlier of t0 + this and hospital discharge.
+  followup_days: 28
 
 phosphate:
   lab_category: phosphate
   specimen_category: plasma_blood
   hypophosphatemia_below_mg_dl: 2.5
+  # The pre-t0 exclusion and has_baseline_phosphate look back this far.
+  lookback_before_t0_hours: 72

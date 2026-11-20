@@ -21,7 +21,7 @@ Used by `01_cohort`:
 | Table | Fields | Categorical values used |
 |---|---|---|
 | `hospitalization` | `patient_id`, `hospitalization_id`, `admission_dttm`, `discharge_dttm`, `age_at_admission`, `discharge_category` | |
-| `adt` | `hospitalization_id`, `in_dttm`, `out_dttm`, `location_category` | `location_category = icu` |
+| `adt` | `hospitalization_id`, `in_dttm`, `out_dttm`, `location_category` | `location_category = icu`; `procedural`, `radiology` bridge ICU rows |
 | `renal_replacement_therapy` | `hospitalization_id`, `recorded_dttm`, `mode_category` | `mode_category` ∈ {`cvvh`, `cvvhd`, `cvvhdf`} |
 | `labs` | `hospitalization_id`, `lab_category`, `lab_value_numeric`, `lab_collect_dttm`, `lab_specimen_category` | `lab_category = phosphate`, `lab_specimen_category = plasma_blood` |
 
@@ -34,13 +34,18 @@ This table grows as those steps are written.
 - **Population:** hospitalizations with `age_at_admission` ≥ 18.
 - **Index:** each patient's earliest CRRT episode (`cvvh`/`cvvhd`/`cvvhdf`) whose first record falls
   within an ICU stay. Episodes are built from qualifying-mode records only, and a gap of 24 h or more
-  starts a new episode. ICU stays are ICU `adt` rows merged when contiguous. **t0** is the episode's
+  starts a new episode. ICU stays are ICU `adt` rows merged across gaps of 6 h or less, or across a
+  gap of any length spent only in `procedural` or `radiology` locations. **t0** is the episode's
   first record.
 - **Unit of analysis:** one row per patient. This is the patient's first hospitalization with CRRT
   started in the ICU, and the ICU stay in which it started.
-- **Outcome window:** t0 to CRRT end + 48 h, cut at ICU-stay end and hospital discharge.
-- **Exclusion:** any `plasma_blood` phosphate < 2.5 mg/dL on the index hospitalization before t0.
-  Patients with no phosphate before t0 are kept and flagged (`has_baseline_phosphate = false`).
+- **Outcome windows:**
+  - *Phosphate outcomes* (hypophosphatemia incidence, repletion): t0 to the earliest of CRRT end +
+    48 h, ICU-stay end and hospital discharge (`phosphate_window_end`).
+  - *Longer-term outcomes* (mortality, extubation, tracheostomy): t0 to the earlier of t0 + 28 days
+    and hospital discharge (`followup_end`). In-hospital death is a discharge.
+- **Exclusion:** any `plasma_blood` phosphate < 2.5 mg/dL collected in the 72 h before t0. Patients
+  with no phosphate in that window are kept and flagged (`has_baseline_phosphate = false`).
 - **Outputs:** patient-level parquet in `output/intermediate_phi/`. In `output/final_no_phi/`:
   small-cell-suppressed CSV counts, a provenance JSON per step, and logs.
 
@@ -117,7 +122,7 @@ case. The test runs the pipeline on those fixtures and checks every result again
 
 | Step | Language | Description |
 |---|---|---|
-| `01_cohort` | Python | Index CRRT episode, t0, outcome window, pre-CRRT hypophosphatemia exclusion, CONSORT counts |
+| `01_cohort` | Python | Index CRRT episode, t0, phosphate and 28-day outcome windows, pre-CRRT hypophosphatemia exclusion, CONSORT counts |
 | `02_covariates` | Python | *Stub.* Baseline characteristics and illness severity in the 24 h before t0 |
 | `03_outcomes` | Python | *Stub.* Hypophosphatemia, phosphate repletion, respiratory and hospital outcomes |
 | `04_descriptive` | R | *Stub.* Descriptive tables and models from the analytic dataset |
