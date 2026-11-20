@@ -41,8 +41,3 @@ def connect(cfg, defs, tables):
             select.append(f"{expr} AS {col}")
         con.execute(f"CREATE VIEW {table} AS SELECT {', '.join(select)} FROM {src}")
     return con
-
-
-def hours(h):
-    """SQL interval for a (possibly fractional) number of hours from definitions."""
-    return f"to_microseconds({int(round(float(h) * 3_600_000_000))})"

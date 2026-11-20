@@ -54,13 +54,13 @@ for pid, (hid, t0, end, wend, icu_in, base) in syn.EXPECTED["cohort"].items():
     bad = {k: (g[k], v) for k, v in exp.items() if g[k] != v}
     check(f"{pid} index, window and baseline", not bad, bad)
 
-with open(OUT / "final_no_phi/01_cohort/consort.csv") as f:
-    consort = {row["step"]: row["n"] for row in csv.DictReader(f)}
+with open(OUT / "final_no_phi/01_cohort/counts.csv") as f:
+    counts = {row["step"]: row["n"] for row in csv.DictReader(f)}
 thr = 11
 for step, n in syn.EXPECTED["counts"].items():
     want = f"<{thr}" if 0 < n < thr else str(n)
     note = f" (true {n}, suppressed)" if want != str(n) else ""
-    check(f"consort {step} = {want}{note}", consort.get(step) == want, consort.get(step))
+    check(f"count {step} = {want}{note}", counts.get(step) == want, counts.get(step))
 
 prov = json.loads((OUT / "final_no_phi/01_cohort/provenance.json").read_text())
 check("provenance block complete",

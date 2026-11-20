@@ -37,6 +37,9 @@ output/intermediate_phi/
 # Synthetic sandbox and its outputs
 dev_data/
 
+# Planning docs
+docs/
+
 # Published papers: read locally, not redistributed
 references/*.pdf
 

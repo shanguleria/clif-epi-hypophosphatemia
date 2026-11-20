@@ -1,5 +1,5 @@
 # Shared study definitions: identical at every site. Site-specific settings live in config.json.
-# Every key here must be read by some step; tests/test_definitions_used.py fails on one that is not.
+# Every key here must be read by some step; tests/test_01_cohort.py fails on one that is not.
 definition_version: "0.1.0"
 clif_version: "3.0.0"
 # CLIF 3.0 is unreleased; table and vocabulary names are pinned to this commit of the 3.0 branch.

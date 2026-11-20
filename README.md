@@ -142,8 +142,7 @@ clif-epi-hypophosphatemia/
 │   └── dev/make_synthetic.py      synthetic CLIF 3.0 fixtures
 ├── tests/
 │   └── test_01_cohort.py
-├── docs/
-│   └── clif_3_0_spec_check.md     CLIF 3.0 coverage of the study's data elements
+├── docs/                          planning notes and guides; local only, gitignored
 ├── references/                    literature PDFs; local only, gitignored
 └── output/
     ├── intermediate_phi/

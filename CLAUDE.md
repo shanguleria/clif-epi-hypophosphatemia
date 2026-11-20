@@ -5,7 +5,8 @@
   edit it. Propose changes and let the researcher make them.
 - Decisions and their rationale (local only, gitignored): `.claude/claude-progress.md` (D1…). Plan: `.claude/claude-todo.md`.
   Lessons: `.claude/lessons.md`.
-- CLIF 3.0 field and vocabulary evidence: `docs/clif_3_0_spec_check.md`.
+- CLIF 3.0 field and vocabulary evidence: `docs/clif_3_0_spec_check.md` (local only, gitignored).
+  Plain-language guide to 01: `docs/cohort_walkthrough.md` (local only).
 
 ## Architecture
 - Python 01–03 build a one-row-per-patient analytic dataset. R 04 onward reads it from
