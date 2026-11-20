@@ -103,8 +103,8 @@ class Step:
     def table(self, name, sql, **params):
         self.con.execute(f"CREATE TEMP TABLE {name} AS {sql}", params)
 
-    def count(self, relation):
-        return self.con.execute(f"SELECT count(*) FROM {relation}").fetchone()[0]
+    def count(self, relation, **params):
+        return self.con.execute(f"SELECT count(*) FROM {relation}", params).fetchone()[0]
 
     def finish(self, output_table, counts):
         """Patient-level table -> intermediate_phi; suppressed counts, provenance, log -> final_no_phi."""

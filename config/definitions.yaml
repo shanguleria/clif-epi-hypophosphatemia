@@ -31,7 +31,10 @@ cohort:
   # length spent only in icu_bridge_location_categories (ICU -> OR -> ICU).
   icu_merge_gap_hours: 6
   icu_bridge_location_categories: [procedural, radiology]
-  crrt_modes: [cvvh, cvvhd, cvvhdf]
+  # One cohort per entry: its name and the RRT modes that qualify. `primary` is the main analysis.
+  crrt_modes:
+    primary: [cvvh, cvvhd, cvvhdf]
+    with_avvh: [cvvh, cvvhd, cvvhdf, avvh]
   crrt_episode_gap_hours: 24
   # Phosphate outcomes: t0 to the earliest of CRRT end + this, ICU-stay end and hospital discharge.
   phosphate_window_after_crrt_end_hours: 48

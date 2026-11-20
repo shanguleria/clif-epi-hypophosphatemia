@@ -22,7 +22,7 @@ Used by `01_cohort`:
 |---|---|---|
 | `hospitalization` | `patient_id`, `hospitalization_id`, `admission_dttm`, `discharge_dttm`, `age_at_admission`, `discharge_category` | |
 | `adt` | `hospitalization_id`, `in_dttm`, `out_dttm`, `location_category` | `location_category = icu`; `procedural`, `radiology` bridge ICU rows |
-| `renal_replacement_therapy` | `hospitalization_id`, `recorded_dttm`, `mode_category` | `mode_category` ∈ {`cvvh`, `cvvhd`, `cvvhdf`} |
+| `renal_replacement_therapy` | `hospitalization_id`, `recorded_dttm`, `mode_category` | `mode_category` ∈ {`cvvh`, `cvvhd`, `cvvhdf`}; `avvh` in the sensitivity cohort |
 | `labs` | `hospitalization_id`, `lab_category`, `lab_value_numeric`, `lab_collect_dttm`, `lab_specimen_category` | `lab_category = phosphate`, `lab_specimen_category = plasma_blood` |
 
 Steps 02–03 will add `patient`, `vitals`, `respiratory_support`, `airway`, `mcs`,
@@ -39,6 +39,9 @@ This table grows as those steps are written.
   first record.
 - **Unit of analysis:** one row per patient. This is the patient's first hospitalization with CRRT
   started in the ICU, and the ICU stay in which it started.
+- **Sensitivity cohort:** the same rules with `avvh` added to the qualifying modes. Both cohorts are
+  in one file, distinguished by `cohort_definition` (`primary`, `with_avvh`), and counted separately.
+  Definitions come from `cohort.crrt_modes` in `config/definitions.yaml`.
 - **Outcome windows:**
   - *Phosphate outcomes* (hypophosphatemia incidence, repletion): t0 to the earliest of CRRT end +
     48 h, ICU-stay end and hospital discharge (`phosphate_window_end`).

@@ -76,31 +76,48 @@ add_hosp("p14", "h14", 63, icu=((2, 50, "icu"), (50, 55, "procedural"), (55, 70,
 add_rrt("h14", 80, 90, "cvvh"); add_phos("h14", 75, 3.0)
 # p15 low phosphate 95 h before t0, outside the 72 h lookback: kept, no baseline
 add_hosp("p15", "h15", 58); add_rrt("h15", 100, 110, "cvvh"); add_phos("h15", 5, 2.0)
+# p16 avvh only: in the with_avvh cohort only
+add_hosp("p16", "h16", 47); add_rrt("h16", 10, 20, "avvh"); add_phos("h16", 5, 3.0)
+# p17 avvh, then cvvhdf after a 30 h gap: primary indexes at the cvvhdf start, with_avvh at the avvh start
+add_hosp("p17", "h17", 52); add_rrt("h17", 10, 20, "avvh"); add_rrt("h17", 50, 60, "cvvhdf"); add_phos("h17", 5, 3.0)
+
+# patient_id: (hospitalization_id, t0 h, crrt_end h, phosphate_window_end h, followup_end h,
+#              icu_in h, has_baseline)
+PRIMARY = {
+    "p01": ("h01", 10, 60, 108, 682, 2, True),
+    "p03": ("h03", 10, 20, 68, 400, 2, False),
+    "p05": ("h05", 50, 70, 118, 400, 2, True),
+    "p07": ("h07a", 10, 20, 68, 400, 2, True),
+    "p09": ("h09", 10, 20, 68, 400, 2, True),
+    "p10": ("h10", 105, 118, 120, 400, 2, True),
+    "p11": ("h11", 10, 20, 68, 400, 2, False),
+    "p12": ("h12", 70, 80, 128, 400, 2, True),
+    "p13": ("h13", 70, 80, 128, 400, 2, True),
+    "p14": ("h14", 80, 90, 138, 400, 70, True),
+    "p15": ("h15", 100, 110, 158, 400, 2, False),
+    "p17": ("h17", 50, 60, 108, 400, 2, True),
+}
 
 EXPECTED = {
     "counts": {
-        "hospitalizations": 16,
-        "adult_hospitalizations": 15,
-        "adult_hospitalizations_crrt_started_in_icu": 13,
-        "patients_index_hospitalization": 12,
-        "excluded_hypophosphatemia_before_crrt": 1,
-        "cohort_patients": 11,
-        "cohort_without_baseline_phosphate": 3,
+        "hospitalizations": 18,
+        "adult_hospitalizations": 17,
+        "primary.adult_hospitalizations_crrt_started_in_icu": 14,
+        "primary.patients_index_hospitalization": 13,
+        "primary.excluded_hypophosphatemia_before_crrt": 1,
+        "primary.cohort_patients": 12,
+        "primary.cohort_without_baseline_phosphate": 3,
+        "with_avvh.adult_hospitalizations_crrt_started_in_icu": 15,
+        "with_avvh.patients_index_hospitalization": 14,
+        "with_avvh.excluded_hypophosphatemia_before_crrt": 1,
+        "with_avvh.cohort_patients": 13,
+        "with_avvh.cohort_without_baseline_phosphate": 3,
     },
-    # patient_id: (hospitalization_id, t0 h, crrt_end h, phosphate_window_end h, followup_end h,
-    #              icu_in h, has_baseline)
     "cohort": {
-        "p01": ("h01", 10, 60, 108, 682, 2, True),
-        "p03": ("h03", 10, 20, 68, 400, 2, False),
-        "p05": ("h05", 50, 70, 118, 400, 2, True),
-        "p07": ("h07a", 10, 20, 68, 400, 2, True),
-        "p09": ("h09", 10, 20, 68, 400, 2, True),
-        "p10": ("h10", 105, 118, 120, 400, 2, True),
-        "p11": ("h11", 10, 20, 68, 400, 2, False),
-        "p12": ("h12", 70, 80, 128, 400, 2, True),
-        "p13": ("h13", 70, 80, 128, 400, 2, True),
-        "p14": ("h14", 80, 90, 138, 400, 70, True),
-        "p15": ("h15", 100, 110, 158, 400, 2, False),
+        "primary": PRIMARY,
+        "with_avvh": {**PRIMARY,
+                      "p16": ("h16", 10, 20, 68, 400, 2, True),
+                      "p17": ("h17", 10, 20, 68, 400, 2, True)},
     },
 }
 

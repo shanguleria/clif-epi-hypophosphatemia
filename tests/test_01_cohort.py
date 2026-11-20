@@ -41,19 +41,23 @@ con = duckdb.connect()
 con.execute("SET TimeZone = 'UTC'")
 rows = con.execute(f"SELECT * FROM read_parquet('{OUT / 'intermediate_phi/01_cohort/cohort.parquet'}')").fetchall()
 cols = [d[0] for d in con.description]
-got = {row[cols.index("patient_id")]: dict(zip(cols, row)) for row in rows}
+got = {(row[cols.index("cohort_definition")], row[cols.index("patient_id")]): dict(zip(cols, row)) for row in rows}
 
-check("cohort patients match", set(got) == set(syn.EXPECTED["cohort"]),
-      f"extra {set(got) - set(syn.EXPECTED['cohort'])}, missing {set(syn.EXPECTED['cohort']) - set(got)}")
-for pid, (hid, t0, end, phos_end, follow_end, icu_in, base) in syn.EXPECTED["cohort"].items():
-    g = got.get(pid)
-    if g is None:
-        continue
-    exp = {"hospitalization_id": hid, "t0": syn.t(t0), "crrt_end": syn.t(end),
-           "phosphate_window_end": syn.t(phos_end), "followup_end": syn.t(follow_end),
-           "icu_in": syn.t(icu_in), "has_baseline_phosphate": base}
-    bad = {k: (g[k], v) for k, v in exp.items() if g[k] != v}
-    check(f"{pid} index, window and baseline", not bad, bad)
+for definition, expected in syn.EXPECTED["cohort"].items():
+    have = {pid for d, pid in got if d == definition}
+    check(f"{definition}: cohort patients match", have == set(expected),
+          f"extra {have - set(expected)}, missing {set(expected) - have}")
+    for pid, (hid, t0, end, phos_end, follow_end, icu_in, base) in expected.items():
+        g = got.get((definition, pid))
+        if g is None:
+            continue
+        exp = {"hospitalization_id": hid, "t0": syn.t(t0), "crrt_end": syn.t(end),
+               "phosphate_window_end": syn.t(phos_end), "followup_end": syn.t(follow_end),
+               "icu_in": syn.t(icu_in), "has_baseline_phosphate": base}
+        bad = {k: (g[k], v) for k, v in exp.items() if g[k] != v}
+        check(f"{definition}: {pid} index, windows and baseline", not bad, bad)
+check("no cohort definitions beyond those expected", {d for d, _ in got} == set(syn.EXPECTED["cohort"]),
+      {d for d, _ in got})
 
 with open(OUT / "final_no_phi/01_cohort/counts.csv") as f:
     counts = {row["step"]: row["n"] for row in csv.DictReader(f)}
@@ -86,7 +90,7 @@ naive_cfg.write_text(json.dumps({**json.loads(DEV_CFG.read_text()), "data_direct
 r = run_step("01_cohort.py", naive_cfg)
 check("naive-timestamp run exits 0", r.returncode == 0, r.stderr[-2000:])
 if r.returncode == 0:
-    t0s = dict(con.execute(f"SELECT patient_id, t0 FROM read_parquet('{ROOT / 'dev_data/output_naive/intermediate_phi/01_cohort/cohort.parquet'}')").fetchall())
+    t0s = {(d, p): t0 for d, p, t0 in con.execute(f"SELECT cohort_definition, patient_id, t0 FROM read_parquet('{ROOT / 'dev_data/output_naive/intermediate_phi/01_cohort/cohort.parquet'}')").fetchall()}
     check("naive local timestamps localize to the same UTC instants", t0s == {k: v["t0"] for k, v in got.items()},
           {k: (t0s.get(k), v["t0"]) for k, v in got.items() if t0s.get(k) != v["t0"]})
 
